@@ -1,0 +1,127 @@
+---
+title: "Week1_Lab"
+author: "Cynthia"
+date: "2025-09-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Create a data frame
+
+```{r}
+animals <- c("Snake","Ostrich","Cat","Spider")
+num_legs <- c(0,2,4,8)
+df <- data.frame(animals,num_legs)
+```
+
+## Check and delete objects
+
+```{r}
+ls() #giving names of the objects
+rm(num_legs) #delete objects
+ls()
+```
+ 
+```{r}
+?rm
+```
+ 
+## Maxtrix operations
+
+```{r}
+x_vect <- seq(12,2,-2)
+x_vect
+```
+ 
+```{r}
+X <- matrix(a,2,3,byrow = FALSE)
+X
+```
+ 
+```{r}
+Y <- matrix(seq(4),2,2)
+Y
+```
+ 
+```{r}
+Z <- matrix(seq(4,10,2),2,2)
+Z
+```
+ 
+```{r}
+Z
+t(Z)
+```
+```{r}
+M <- Y + Z
+M
+```
+ 
+```{r}
+N <- Y*Y #点乘
+N
+```
+
+```{r}
+P <- Y%*%Y #矩阵乘法
+P
+```
+
+Matrix inverse--solve()
+```{r}
+solve(Y)
+solve(Y)%*%Y #单位矩阵
+```
+```{r}
+solve(Y)%*%X
+```
+
+## Writing a function within R
+
+```{r}
+myFirstRFunc <- function(n){
+  sum <- 0
+  for(i in 2:n-1){
+    if(i%%2 == 0 | i%%7 == 0){
+      sum<-sum+i
+    }
+  }
+  return(sum)
+}
+```
+
+```{r}
+myFirstRFunc(14)
+```
+
+
+## Wave plot
+
+```{r}
+x <- seq(0,20,0.01)
+y <- sin(x)
+sin_df <- data.frame(x,y)
+head(sin_df,5)
+```
+
+## Plot sin_df
+
+```{r}
+plot(x,y)
+```
+
+$$
+sin^2(x) + cos^2(x)=1
+$$
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
