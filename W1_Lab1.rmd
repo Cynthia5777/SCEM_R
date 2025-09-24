@@ -37,7 +37,7 @@ x_vect
 ```
  
 ```{r}
-X <- matrix(a,2,3,byrow = FALSE)
+X <- matrix(x_vect,2,3,byrow = FALSE)
 X
 ```
  
