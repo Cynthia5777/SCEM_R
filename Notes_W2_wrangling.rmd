@@ -1,0 +1,209 @@
+---
+title: "Notes_W2"
+author: "Cynthia"
+date: "2025-09-28"
+output: html_document
+---
+### Data wrangling
+
+Data wrangling: the process of transforming data from one form to another in preparation for another downstream task(e.g., visualization, modelling)
+
+
+```{r}
+library("dplyr")
+#select()
+#filter()
+#mutate()
+```
+
+```{r}
+library(tidyverse)
+```
+
+## dataset Palmer Penguins
+```{r}
+#install.packages("palmerpenguins")
+library(palmerpenguins)
+```
+
+```{r}
+head(penguins)
+```
+
+Row: observations or cases
+Columns:variables corresponds to a property of quality of the individual examples
+
+## data wrangling operations
+selecting,filtering,mutating,arranging,summarizing,jointing
+
+
+# 1.selecting
+Selecting a subset of columns and generating a new dataset (with fewer columns)
+In R, this can be done with the select() function (from the dplyr package)
+
+```{r}
+penguinsv2<-select(penguins,species,bill_length_mm,body_mass_g,flipper_length_mm)
+print(penguinsv2)
+
+select(penguins,-species,-bill_length_mm,-body_mass_g) # remove specific columns
+```
+
+# 2.filtering
+Extracting a subset of rows (while the columns are unchanged)
+In R, this can be done with the filter() function (from the dplyr package),
+
+```{r}
+filter(penguinsv2, species=="Gentoo")
+
+filter(penguinsv2, species=="Gentoo" & body_mass_g>5000)
+```
+```{r}
+#combine filter & select function
+select(filter(penguinsv2,species=="Gentoo"),species,bill_length_mm,body_mass_g)
+```
+-Simplifying codes with the pipe operator
+We can also chain multiple operations with the pipe operator %>%
+```{r}
+select(filter(penguinsv2,species=="Gentoo"),species,bill_length_mm,body_mass_g)
+
+penguinsv2 %>%
+  filter(species=="Gentoo")%>%
+  select(species,bill_length_mm,body_mass_g)
+ 
+## x %>% f(y)        等价于 f(x, y)
+## x %>% f(y, .)     等价于 f(y, x)
+## x %>% f(y, z = .) 等价于 f(y, z = x)
+```
+
+# 3.creating and renaming columns
+-The aim is to create a new column as a function of existing columns.
+In R, this can be done with the mutate function (from the dplyr package)
+
+```{r}
+#create new column
+penguinsv2 %>%
+  mutate(flipper_bill_ratio=flipper_length_mm/bill_length_mm)
+
+#rename an existing column
+penguinsv2 %>% rename(f_1_m=flipper_length_mm)
+```
+
+# 4.Sorting the rows
+Sorting the rows of a data frame according to the values of a column
+In R, this can be done with the arrange() function
+```{r}
+#sorting according to bill_length_mm in ascending order
+penguinsv2 %>% arrange((bill_length_mm))
+
+#descending order
+penguinsv2 %>% arrange(desc(bill_length_mm)) 
+```
+
+# 5.Summarizing data
+-Summarizing a data frame into just one value or a vector (e.g., compute the mean, median, sum, standard deviation, ... of a column)
+In R, this can be done with the summarize() function
+
+```{r}
+penguinsv2 %>%
+  summarize(num_rows=n(),avg_weight_kg=mean(body_mass_g/1000,na.rm=TRUE),avg_flipper_bill_ratio=mean(flipper_length_mm/bill_length_mm,na.rm=TRUE))
+```
+Here we have extracted three statistics including the number of rows, average weights, and average flipper bill ratio (which are contained in the three columns of the output)
+
+#Group the rows when summarizing
+We can use the function group_by() to group the rows of the data frames according to some given criteria, e.g. species
+```{r}
+penguinsv2 %>%
+  group_by(species)
+```
+
+#Summarize by group
+```{r}
+penguinsv2 %>%
+  group_by(species) %>%
+  summarize(num_rows=n(),avg_weight_kg=mean(body_mass_g/1000,na.rm=TRUE),avg_flipper_bill_ratio=mean(flipper_length_mm/bill_length_mm,na.rm=TRUE))
+```
+
+# Column-wise operations with across()
+Suppose that we want to compute the number of NA (not available) values in each column, which can be done via
+
+```{r}
+Num_NAs <- penguinsv2 %>% summarize(species=sum(is.na(species)),bill_length_mm=sum(is.na(bill_length_mm)),body_mass_g=sum(is.na(body_mass_g)),flipper_length_mm=sum(is.na(flipper_length_mm)))
+print(Num_NAs)
+```
+
+Use across() to perform column-wise operations (for all columns), without copying and pasting the same code (e.g., sum(is.na(species)), ...)
+
+```{r}
+Num_NAs2 <- penguinsv2 %>% summarize(across(everything(),~sum(is.na(.x))))
+print(Num_NAs2)
+#~sum(is.na(.x)) 等价function(x) sum(is.na(x))
+```
+```{r}
+# 选择所有列
+across(everything())
+
+# 按列名选择
+across(c(col1, col2, col3))
+across(starts_with("price"))
+across(ends_with("_score"))
+across(contains("date"))
+
+# 按数据类型选择
+across(where(is.numeric))      # 所有数值列
+across(where(is.character))    # 所有字符列
+across(where(is.factor))       # 所有因子列
+```
+
+# Column-wise operations on a subset of columns
+We can combine across () and where() to perform column-wise operations for a subset of columns (for example, that is of numeric type)
+```{r}
+penguinsv2 %>% summarize(across(where(is.numeric),~mean(.x,na.rm=TRUE)))
+```
+# Column-wise summarizing by groups
+We can combine the summarize, group_by and across functions to perform Column-wise summarizing by groups
+```{r}
+penguinsv2 %>% select(-bill_length_mm) %>%
+  group_by(species) %>%
+  summarize(across(where(is.numeric),~mean(.x,na.rm=TRUE))) #function(x){(mean(x, na.rm=TRUE))}
+```
+
+# 6.Joining multiple data frames
+Combining multiple data frames--joint()
+
+```{r}
+#create data frame 1: a data frame of bill lengths and species
+penguin_bill_lengths_df <- penguinsv2 %>%
+  arrange(desc(bill_length_mm)) %>%
+  select(species, bill_length_mm)
+penguin_bill_lengths_df
+#降序
+```
+
+```{r}
+#create data frame 2: a data frame of Latin species names
+species <- unique(penguinsv2$species)
+latin_name <-c("Pygoscelis adeliae","Pygoscelis papua","Pygoscelis antarcticus")
+latin_name_df <- data.frame(species,latin_name)
+print(latin_name_df)
+```
+
+```{r}
+#combine these two data frames with a join function
+penguin_bill_lengths_df %>% inner_join(latin_name_df)
+```
+Here we have used the function inner_join(), which is a type of join function. There are other types of join functions available
+
+#Types of join functions- deals with missing rows differently
+1.Inner join 
+  -An inner join means only rows with matching keys in both x and y are included in the result.
+
+2. Outer join
+  -An outer join (also called a full join) means to include all rows in x with matching columns in y, then the rows of y that don’t match x.
+
+3. left join
+  -A left join means to include all rows in x, and add matching columns from y
+  
+4. right join
+  -A right join means to include all rows in y, and add matching columns from x.
+
+

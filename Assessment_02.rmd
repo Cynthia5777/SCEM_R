@@ -1,0 +1,299 @@
+---
+title: "W2_assessment"
+author: "Cynthia"
+date: "2025-10-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(nycflights13)
+library(gapminder)
+library(tidyverse)
+```
+```{r}
+head(flights)
+```
+# Part I: Data wrangling
+
+## 1.1 Select and Filter
+
+# (Q1) Use a combination of select() and filter() to create a data frame called large_delays_JFK from the flights dataset, containing only:
+1. Rows representing flights with the following characteristics:
+- Departing from JFK airport.
+- Departure delay is greater than or equal to 60 minutes.
+2. Columns:
+- year, month, day
+- dep_delay (departure delay in minutes)
+- arr_delay (arrival delay in minutes)
+- carrier (airline code)
+Use the pipe operator %>% to simplify your code. Show the first 5 rows of the resulting data 
+frame.
+```{r}
+large_delays_JFK <- flights %>%
+  filter(origin=="JFK" & dep_delay >= 60)%>%
+  select(year,month,day,dep_delay,arr_delay,carrier)
+head(large_delays_JFK,5)
+```
+
+# (Q2) How many variables does the large_delays_JFK data frame have? How many observations
+6 varibles 
+8541 observations
+```{r}
+cat("Number of varibles:",ncol(large_delays_JFK),"\n")
+cat("Number of observations",nrow(large_delays_JFK),"\n")
+```
+## 1.2 Arrange
+
+# Q3) Sort large_delays_JFK by arrival delay in descending order (i.e., largest to smallest). Print the top 5 rows
+
+```{r}
+large_delays_JFK %>% arrange(desc(arr_delay))%>%head(5)
+```
+
+## 1.3 Join and Rename
+```{r}
+airline_lookup <- data.frame(
+  carrier=c("AA","DL","UA","B6","WN"),
+  airline_name = c("American Airlibes","Delta","United Airlines","JetBlue","Southwest Airlines")
+)
+```
+
+# (Q4) Use left_join() to merge airline_lookup into large_delays_JFK, replacing carrier codes with full airline names. Store this as a new variable X
+```{r}
+X <- large_delays_JFK %>%
+  left_join(airline_lookup)%>%
+  mutate(carrier=airline_name)
+print(X)
+```
+```{r}
+large_delays_JFK<- large_delays_JFK%>% left_join(airline_lookup)
+```
+
+# (Q5) Rename the variable airline_name in data frame X to simply airline, then use a combination of select() and print() to display the first 7 rows of only the airline_name, dep_delay, and arr_delay columns.
+
+```{r}
+X<- X %>% rename(airline=airline_name)
+
+print(head(select(X,airline,dep_delay,arr_delay),7))
+```
+
+
+# (Q6) Does it matter whether you use left_join() vs. inner_join() in this case? Can you think of a situation in which it would make a difference? (e.g., in a real data analysis project)
+Not all carrier codes are included in the created data frame
+
+In this specific case, it doesn't matter whether we use left_join() or inner_join() because all carriers in large_delays_JFK are present in airline_lookup. However, in real data analysis projects, it would make a difference if:
+Some carriers in the main dataset are not in the lookup table → inner_join() would remove those observations
+We want to keep all observations from the main dataset even if lookup information is missing → use left_join()
+We want to ensure data quality and only keep matched records → use inner_join()
+
+```{r}
+Y <- large_delays_JFK %>%
+  inner_join(airline_lookup)%>%
+  mutate(carrier=airline_name)
+Y<- Y %>% rename(airline=airline_name)
+
+print(head(select(Y,airline,dep_delay,arr_delay),7))
+```
+
+## 1.4 Mutate
+Assume that we are interested in a “delay ratio” variable, defined as delay_ratio = arr_delay / dep_delay.
+
+# (Q7) Using mutate(), compute this ratio for all flights in large_delays_JFK. Use select() to keep only airline_name and delay_ratio, and arrange the dataset by descending value of the delay ratio. Show the top 10 rows.
+
+```{r}
+result <- large_delays_JFK %>% 
+  mutate(delay_ratio=arr_delay / dep_delay)%>%
+  select(airline_name,delay_ratio)%>%
+  arrange(desc(delay_ratio))%>% head(10) 
+print(result)
+```
+```{r}
+large_delays_JFK<-large_delays_JFK %>%
+  mutate(delay_ratio=arr_delay / dep_delay)
+```
+
+## 1.5 Summarise and Group By
+
+# (Q8) Use group_by() to group the joined dataset by airline name and create a summary table with:
+1. Number of flights (n_flights)
+2. Average departure delay (avg_dep_delay)
+3. Median arrival delay (median_arr_delay)
+4. The maximum delay ratio (max_delay_ratio
+
+```{r}
+summary_table<-large_delays_JFK%>%
+  group_by(airline_name)%>%
+  summarize(n_flights=n(),avg_dep_delay=mean(dep_delay,na.rm=TRUE),median_arr_delay=median(arr_delay,na.rm=TRUE),max_delay_ratio=max(delay_ratio,na.rm=TRUE))
+summary_table
+```
+
+# (Q9) Count the number of missing values for each delay-related column by airline.
+
+```{r}
+Num_NAs <- large_delays_JFK %>% summarize(across(c("dep_delay","arr_delay","delay_ratio"),~sum(is.na(.x))))
+print(Num_NAs)
+```
+
+# Part II: A quick recap of probability
+
+Suppose that samples of the glass used to manufacture smartphone screens are analyzed for scratch resistance (ScR) and shock resistance (ShR). The results from 100 samples are summarized below:
+
+
+          ShR:high  ShR:low
+ScR:high      70       9
+ScR:low       16       5
+
+A:a sample has high shock resistance
+B:a sample has high scratch resistance
+
+$$
+A \cap B:70\\
+\overline{A}:14\\
+A \cup B:95\\
+$$
+If a sample is selected at random, what is the probability that its scratch resistance is high AND its shock resistance is high?
+$$
+P(A \cap B)=70/100=0.7
+$$
+If a sample is selected at random, what is the probability that its scratch resistance is high OR its shock resistance is high
+$$
+P(A \cup B)=95/100=0.95
+$$
+Consider the event that a sample has high scratch resistance and the event that a sample has high shock resistance. Are these two events mutually exclusive?
+NO
+
+$$
+P(A) =0.86\\ 
+P(B) =0.79\\
+P(A \mid B)=0.7/0.79=0.89 \\
+P(B \mid A)=0.7/0.86=0.81
+$$
+
+Are events A and B independent? Why
+NO
+$$
+P(A \cap B) \neq P(A) \times P(B)
+$$
+
+Software to detect fraud in consumer phone cards tracks the number of metropolitan areas where calls originate each day. It is found that 1% of the legitimate users originate calls from two or more metropolitan areas in a single day. However, 30% of 
+fraudulent users originate calls from two or more metropolitan areas in a single day. The proportion of fraudulent users in the population is 0.01%. If the same user originates calls from two or more metropolitan areas in a single day, what is the probability that the user is fraudulent?
+
+A: originate calls from two or more metropolitan areas in a single day
+B:user is fraudulent
+$$
+P(A)=0.01\\
+P(B)=0.0001\\
+P(A \mid B)=0.3\\
+P(B \mid A)=P(A \cap B)/P(A)\\=P(A \mid B)*P(B)/P(A)\\=0.3*0.0001/0.01=0.003
+$$
+
+Some performance indicators commonly used to assess the performance of machine 
+learning models for binary classification can be easily defined in probabilistic terms:
+
+Sensitivity (also known as true positive rate or recall): probability that a model correctly 
+classifies a positive observation,
+$$
+P(prediction=+ \mid class=+)
+$$
+
+Specificity (also known as true negative rate): probability that a model correctly classifies 
+a negative observation, 
+$$
+P(prediction=- \mid class=-)
+$$
+
+Accuracy: probability that a model correctly classifies an observation regardless of class, 
+$$
+P(prediction=+ \mid class=+)P(class=+)\\ + P(prediction=- \mid class=-)P(class=-)
+$$
+**Not very useful in the context of imbalanced 
+classification, when one of the classes is much more common than the other.**
+
+Imagine that a model is trained for the problem of detecting fraudulent credit card transactions. Most card transactions are legitimate, and only a minority of transactions (e.g., 0.05%) are fraudulent. If we assume that the event “transaction is fraudulent” is our event of interest (the “positive” event) then this means 𝑃(+) = 0.0005
+
+A default classifier (also known as a zero-rule model) is a hypothetical model that predicts everything as the majority class - often useless, but good as a baseline. Calculate the Sensitivity, Specificity and Accuracy for a zero-rule classifier in the credit card fraud detection example above
+
+For zero-rule classifier (predicts all as negative/legitimate):
+
+Sensitivity = 0 (no true positives, all positives misclassified)
+Specificity = 1 (all negatives correctly classified)
+Accuracy = $P(-) = 0.9995$
+
+在类别不平衡问题中，准确率是一个极具误导性的指标。一个愚蠢的基准模型也能获得很高的准确率，但这并不意味着它有用。我们必须关注灵敏度和精确度等针对正类别的指标。
+
+计算精确度（Precision / PPV）
+$$
+P(class=+ \mid prediction=+)
+$$
+当模型警报响起（预测为欺诈）时，这个警报有多大概率是真的？
+Imagine that you develop a model with 99.9% sensitivity and 99% specificity for the credit card fraud detection example above. If your model predicts a transaction as fraud (i.e., prediction = +), calculate the probability that the transaction is indeed fraudulent (note: this is another common classification metric known as Precision or positive predictive value, PPV)
+
+使用贝叶斯定理计算：
+
+我们已知：
+$$
+P(+)=0.0005\\
+P(-)=0.9995\\
+P(prediction=+ \mid class=+)=0.999(sensitivity)\\
+P(prediction=+ \mid class=-)=1-0.99=0.01(Flase-Positive)\\
+P(prediction=+)=P(prediction=+ \mid class=+)*P(+)\\
++P(prediction=+ \mid class=-)*P(-)\\
+=0.9990.0005+0.01*0.9995=0.0104945
+$$
+
+$$
+P(class=+ \mid prediction=+)\\
+=P(prediction=+ \mid class=+)*P(class=+)/P(prediction=+)\\=(0.999*0.0005)/0.0104945\\=0.0476
+$$
+
+即使模型敏感度和特异度看起来很高，但由于欺诈比例极低，预测为欺诈的交易中实际上只有约 4.76% 是真的欺诈（ Precision 很低）
+
+样本不平衡看精确度Precision
+
+
+```{r}
+# Simulation for Monty Hall problem
+set.seed(123)
+n_simulations <- 10000
+
+# Strategy 1: Stick with initial choice
+stick_wins <- 0
+# Strategy 2: Switch choice  
+switch_wins <- 0
+
+for (i in 1:n_simulations) {
+  # Randomly assign treasure to one gate
+  treasure <- sample(1:3, 1)
+  # Player's initial choice
+  initial_choice <- sample(1:3, 1)
+  
+  # Host reveals a gate with trap (not treasure, not initial choice)
+  possible_reveals <- setdiff(1:3, c(treasure, initial_choice))
+  if (length(possible_reveals) == 0) {
+    # If initial choice was correct, host can reveal either of the other two
+    possible_reveals <- setdiff(1:3, initial_choice)
+  }
+  host_reveal <- sample(possible_reveals, 1)
+  
+  # Switching choice
+  switch_choice <- setdiff(1:3, c(initial_choice, host_reveal))
+  
+  # Check wins
+  if (initial_choice == treasure) stick_wins <- stick_wins + 1
+  if (switch_choice == treasure) switch_wins <- switch_wins + 1
+}
+
+cat("Win probability by sticking:", stick_wins/n_simulations, "\n")
+cat("Win probability by switching:", switch_wins/n_simulations)
+```
+
+
+
+
+
+
+
